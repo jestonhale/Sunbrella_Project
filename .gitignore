@@ -1,0 +1,40 @@
+# Ignore all Xcode project files
+*.xcodeproj
+*.xcworkspace
+*.xcuserdata
+*.xcshareddata
+*.xccheckout
+*.xcscmblueprint
+*.xcsettings
+*.xcconfig
+*.pbxproj
+*.plist
+
+# Ignore all Xcode folders and files except for .swift
+*.h
+*.m
+*.cpp
+*.c
+*.mm
+*.hmap
+*.a
+*.dylib
+*.framework
+*.bundle
+*.nib
+*.storyboard
+*.xib
+*.xcdatamodel
+*.xcdatamodeld
+*.xcmappingmodel
+*.xcodeproj
+*.xcworkspace
+*.xcuserstate
+
+# Keep .swift files
+!*.swift
+*.json
+*Assets.xcassets*
+*testUITests*
+*testTests*
+*.DS_Store
