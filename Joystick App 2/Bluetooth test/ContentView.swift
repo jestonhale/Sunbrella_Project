@@ -35,6 +35,18 @@ struct ContentView: View {
                                 .cornerRadius(10)
                                 .padding()
                         }
+                        // New ShadeLock Mode Button (Green)
+                                  /*    Button(action: {
+                                          bleManager.toggleShadeLockMode()
+                                      }) {
+                                          Text("S-L")
+                                              .frame(width: 50, height: 50)
+                                              .background(Color.green)
+                                              .foregroundColor(.white)
+                                              .cornerRadius(25) // Rounded edges
+                                              .padding()
+                                      }*/
+
 
                         // Existing Disconnect Button
                         Button("Disconnect and Select Another Device") {
