@@ -79,6 +79,7 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
             motorControlCharacteristic = characteristic
             sendCommand("APP_CONNECTED")
         }
+        
     }
 
     // New functions for continuous movement
@@ -103,9 +104,9 @@ class BLEManager: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeriph
         case .down:
             command = "MOTOR1:-1:100"  // Adjust speed value as necessary
         case .left:
-            command = "MOTOR2:1:100"  // Adjust speed value as necessary
-        case .right:
             command = "MOTOR2:-1:100"  // Adjust speed value as necessary
+        case .right:
+            command = "MOTOR2:1:100"  // Adjust speed value as necessary
         }
         sendCommand(command)
     }
