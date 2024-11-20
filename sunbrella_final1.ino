@@ -1,4 +1,3 @@
-
 #include <Arduino.h>
 #include <Wire.h>
 #include <Stepper.h>
@@ -84,9 +83,6 @@ void controlMotorsWithPhotoresistors() {
   int NorthWest = map(lightTopLeft, minLightValue, maxLightValue, 100, 0);
   int SouthWest = map(lightBottomLeft, minLightValue, maxLightValue, 100, 0);
 
-  //Sensitivity of Stepper motor movement
-  const int threshold = 3;
-
   // Print the light values to the Serial Monitor
   Serial.println();
   Serial.print("TR: ");
@@ -102,67 +98,22 @@ void controlMotorsWithPhotoresistors() {
   Serial.print("  -  Position2 #: ");
   Serial.print(currentStep2);
 
+   // Step 1: Handle Motor 1 first
+  if (abs(NorthEast - NorthWest) >= 4 && (NorthEast > NorthWest)) {
+    moveMotor1CL();    // Rotate motor toward NorthEast when NorthEast is greater
+  } else if (abs(NorthEast - NorthWest) >= 4 && (NorthEast < NorthWest)) {
+    moveMotor1CCL();   // Rotate motor toward NorthWest when NorthWest is greater
+  } else {
+    motor1Moving = false;  // Stop Motor 1
+  }
 
-    // Condition 1: NorthEast and NorthWest both greater than SouthEast and SouthWest
-    if (NorthEast > SouthEast && NorthEast > SouthWest && NorthWest > SouthEast && NorthWest > SouthWest) {
-        if (abs(NorthEast - NorthWest) > threshold) {
-            if (NorthEast > NorthWest) {
-                moveMotor1CL();  // Move towards NorthEast
-            } else {
-                moveMotor1CCL(); // Move towards NorthWest
-            }
-        }
-    }
-
-    // Condition 2: NorthEast and SouthEast both greater than NorthWest and SouthWest
-    else if (NorthEast > NorthWest && NorthEast > SouthWest && SouthEast > NorthWest && SouthEast > SouthWest) {
-        if (abs(NorthEast - SouthEast) > threshold) {
-            if (NorthEast > SouthEast) {
-                moveMotor1CCL();  // Move towards NorthEast
-            } else {
-                moveMotor1CL(); // Move towards SouthEast
-            }
-        }
-    }
-    // Condition 3: NorthWest and SouthWest both greater than NorthEast and SouthEast
-    else if (NorthWest > NorthEast && NorthWest > SouthEast && SouthWest > NorthEast && SouthWest > SouthEast) {
-        if (abs(NorthWest - SouthWest) > threshold) {
-            if (NorthWest > SouthWest) {
-                moveMotor1CL();  // Move towards NorthWest
-            } else {
-                moveMotor1CCL(); // Move towards SouthWest
-            }
-        }
-    }
-    // Condition 4: SouthEast and SouthWest both greater than NorthEast and NorthWest
-    else if (SouthEast > NorthWest && SouthEast > NorthEast && SouthWest > NorthWest && SouthWest > NorthEast) {
-        if (abs(SouthEast - SouthWest) > threshold) {
-            if (SouthEast > SouthWest) {
-                moveMotor1CCL();  // Move towards SouthEast
-            } else {
-                moveMotor1CL(); // Move towards SouthWest
-            }
-        }
-    }
-    // ---- Second Stepper Motor: Tilt Adjustment ----
-    // Check if all horizontal pairs are within threshold
-    bool isHorizontalBalanced = (abs(NorthEast - NorthWest) <= threshold) && (abs(SouthEast - SouthWest) <= threshold);
-
-    if (isHorizontalBalanced) {
-        // Balance vertical pairs
-        int topAvg = (NorthEast + NorthWest) / 2;  // Average of top sensors
-        int bottomAvg = (SouthEast + SouthWest) / 2; // Average of bottom sensors
-
-        if (abs(topAvg - bottomAvg) > threshold) {
-            if (topAvg > bottomAvg) {
-                moveMotor2CCL();  // Tilt downward
-            } else {
-                moveMotor2CL();    // Tilt upward
-            }
-        }
-    }
-
-  else {
+  // Step 2: Handle Motor 2 only if TR and TL are within the range of 6
+  if (abs(NorthEast - NorthWest) <= 4) {  // Check if TR and TL are within the range of 6
+    if (abs(NorthEast - SouthEast) >= 5 && (NorthEast > SouthEast)) {
+      moveMotor2CCL();  // Rotate motor toward NorthEast when NorthEast is greater
+    } else if (abs(NorthEast - SouthEast) >= 5 && (NorthEast < SouthEast)) {
+      moveMotor2CL(); // Rotate motor toward SouthEast when SouthEast is greater
+    } else {
       motor2Moving = false; // Stop Motor 2
     }
   } else {
@@ -180,7 +131,7 @@ void controlMotorsWithPhotoresistors() {
       appControlMode = false;
     }
   }*/
-
+}
 void moveMotor1CCL(){
   motor1Moving = true;
   digitalWrite(dirPin1, LOW);
