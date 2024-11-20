@@ -1,3 +1,4 @@
+
 #include <Arduino.h>
 #include <Wire.h>
 #include <Stepper.h>
@@ -15,10 +16,10 @@ const int minLightValue = 0;
 const int maxLightValue = 1023;
 
 // Define pins for the stepper motors
-const int stepPin1 = 4;
-const int dirPin1 = 5;
 const int stepPin2 = 2;
 const int dirPin2 = 3;
+const int stepPin1 = 4;
+const int dirPin1 = 5;
 
 Stepper stepper1(stepsPerRevolution, stepPin1, dirPin1);
 Stepper stepper2(stepsPerRevolution, stepPin2, dirPin2);
@@ -69,6 +70,8 @@ void setup() {
 }
 
 void controlMotorsWithPhotoresistors() {
+  checkBLECommands();
+  if (autoModeEnabled == true){
 // Read the analog values from the photoresistors
   int lightTopRight = analogRead(photoResistorTopRight);
   int lightTopLeft = analogRead(photoResistorTopLeft);
@@ -81,7 +84,11 @@ void controlMotorsWithPhotoresistors() {
   int NorthWest = map(lightTopLeft, minLightValue, maxLightValue, 100, 0);
   int SouthWest = map(lightBottomLeft, minLightValue, maxLightValue, 100, 0);
 
+  //Sensitivity of Stepper motor movement
+  const int threshold = 3;
+
   // Print the light values to the Serial Monitor
+  Serial.println();
   Serial.print("TR: ");
   Serial.print(NorthEast);
   Serial.print(", TL: ");
@@ -91,33 +98,88 @@ void controlMotorsWithPhotoresistors() {
   Serial.print(", BL: ");
   Serial.print(SouthWest);
   Serial.print("  -  Position1 #: ");
-  Serial.println(currentStep1);
+  Serial.print(currentStep1);
   Serial.print("  -  Position2 #: ");
-  Serial.println(currentStep2);
+  Serial.print(currentStep2);
 
-   // Step 1: Handle Motor 1 first
-  if (abs(NorthEast - NorthWest) >= 3 && (NorthEast > NorthWest)) {
-    moveMotor1CL();    // Rotate motor toward NorthEast when NorthEast is greater
-  } else if (abs(NorthEast - NorthWest) >= 3 && (NorthEast < NorthWest)) {
-    moveMotor1CCL();   // Rotate motor toward NorthWest when NorthWest is greater
-  } else {
-    motor1Moving = false;  // Stop Motor 1
-  }
 
-  // Step 2: Handle Motor 2 only if TR and TL are within the range of 6
-  if (abs(NorthEast - NorthWest) <= 10) {  // Check if TR and TL are within the range of 6
-    if (abs(NorthEast - SouthEast) >= 10 && (NorthEast > SouthEast)) {
-      moveMotor2CCL();  // Rotate motor toward NorthEast when NorthEast is greater
-    } else if (abs(NorthEast - SouthEast) >= 10 && (NorthEast < SouthEast)) {
-      moveMotor2CL(); // Rotate motor toward SouthEast when SouthEast is greater
-    } else {
+    // Condition 1: NorthEast and NorthWest both greater than SouthEast and SouthWest
+    if (NorthEast > SouthEast && NorthEast > SouthWest && NorthWest > SouthEast && NorthWest > SouthWest) {
+        if (abs(NorthEast - NorthWest) > threshold) {
+            if (NorthEast > NorthWest) {
+                moveMotor1CL();  // Move towards NorthEast
+            } else {
+                moveMotor1CCL(); // Move towards NorthWest
+            }
+        }
+    }
+
+    // Condition 2: NorthEast and SouthEast both greater than NorthWest and SouthWest
+    else if (NorthEast > NorthWest && NorthEast > SouthWest && SouthEast > NorthWest && SouthEast > SouthWest) {
+        if (abs(NorthEast - SouthEast) > threshold) {
+            if (NorthEast > SouthEast) {
+                moveMotor1CCL();  // Move towards NorthEast
+            } else {
+                moveMotor1CL(); // Move towards SouthEast
+            }
+        }
+    }
+    // Condition 3: NorthWest and SouthWest both greater than NorthEast and SouthEast
+    else if (NorthWest > NorthEast && NorthWest > SouthEast && SouthWest > NorthEast && SouthWest > SouthEast) {
+        if (abs(NorthWest - SouthWest) > threshold) {
+            if (NorthWest > SouthWest) {
+                moveMotor1CL();  // Move towards NorthWest
+            } else {
+                moveMotor1CCL(); // Move towards SouthWest
+            }
+        }
+    }
+    // Condition 4: SouthEast and SouthWest both greater than NorthEast and NorthWest
+    else if (SouthEast > NorthWest && SouthEast > NorthEast && SouthWest > NorthWest && SouthWest > NorthEast) {
+        if (abs(SouthEast - SouthWest) > threshold) {
+            if (SouthEast > SouthWest) {
+                moveMotor1CCL();  // Move towards SouthEast
+            } else {
+                moveMotor1CL(); // Move towards SouthWest
+            }
+        }
+    }
+    // ---- Second Stepper Motor: Tilt Adjustment ----
+    // Check if all horizontal pairs are within threshold
+    bool isHorizontalBalanced = (abs(NorthEast - NorthWest) <= threshold) && (abs(SouthEast - SouthWest) <= threshold);
+
+    if (isHorizontalBalanced) {
+        // Balance vertical pairs
+        int topAvg = (NorthEast + NorthWest) / 2;  // Average of top sensors
+        int bottomAvg = (SouthEast + SouthWest) / 2; // Average of bottom sensors
+
+        if (abs(topAvg - bottomAvg) > threshold) {
+            if (topAvg > bottomAvg) {
+                moveMotor2CCL();  // Tilt downward
+            } else {
+                moveMotor2CL();    // Tilt upward
+            }
+        }
+    }
+
+  else {
       motor2Moving = false; // Stop Motor 2
     }
   } else {
     motor2Moving = false;  // Ensure Motor 2 does not move if TR and TL are not within range
   }
-
 }
+/*if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\n');
+    if (command == "MOTOR") {
+      appControlMode = true;
+      autoModeEnabled = false;
+      Serial.print("Switching to App Mode...");
+      delay(2000);
+    } else if (command == "APP_DISCONNECTED") {
+      appControlMode = false;
+    }
+  }*/
 
 void moveMotor1CCL(){
   motor1Moving = true;
@@ -167,17 +229,38 @@ void moveMotor2CL(){
 }
 
 void resetMotorPosition() {
-   while (currentStep1 != 0 || currentStep2 != 0){
-    if currentStep1 < 0{
-    digitalWrite(dirPin2, HIGH)
+  while (currentStep1 != 0 || currentStep2 != 0){
+    Serial.print("Position1 #: ");
+    Serial.print(currentStep1);
+    Serial.print(" - Position2 #: ");
+    Serial.print(currentStep2);
+    Serial.println();
+    if (currentStep1 < 0){
+    digitalWrite(dirPin1, HIGH);
+    digitalWrite(stepPin1, HIGH);
+    delay(1);
+    digitalWrite(stepPin1, LOW);
+    delay(1);
+    currentStep1 += 1;
+    }
+    if (currentStep1 > 0){
+    digitalWrite(dirPin1, LOW);
+    digitalWrite(stepPin1, HIGH);
+    delay(1);
+    digitalWrite(stepPin1, LOW);
+    delay(1);
+    currentStep1 -= 1;
+    }
+    if (currentStep2 < 0){
+    digitalWrite(dirPin2, HIGH);
     digitalWrite(stepPin2, HIGH);
     delay(1);
     digitalWrite(stepPin2, LOW);
     delay(1);
-    currentStep2 -= 1;
+    currentStep2 += 1;
     }
-    if currentStep1 < 0{
-    
+    if (currentStep2 > 0){
+    digitalWrite(dirPin2, LOW);
     digitalWrite(stepPin2, HIGH);
     delay(1);
     digitalWrite(stepPin2, LOW);
@@ -185,25 +268,21 @@ void resetMotorPosition() {
     currentStep2 -= 1;
     }
 
+else if (currentStep1 == 0 && currentStep2 == 0){
+  break;
    }
   }
+ }
 
 
-void controlMotorsWithApp() {
-  if (millis() - lastBLECheck >= BLECheckInterval) {
-    lastBLECheck = millis();
-    checkBLECommands();
+void AutoMode() {
+  while((appControlMode == false) && (autoModeEnabled == true)){
+    controlMotorsWithPhotoresistors();
+    if (appControlMode == true){
+      break;
+    }
   }
-
-  if (motor1CommandArrived) {
-    pulseMotor(stepPin1, dirPin1, motor1Direction, motor1Speed);
-  }
-  if (motor2CommandArrived) {
-    pulseMotor(stepPin2, dirPin2, motor2Direction, motor2Speed);
-  } else if (!motor2CommandArrived, !motor1CommandArrived) {
-    motor1CommandArrived = false;
-    motor2CommandArrived = false;
-  }
+  
 
 }
 
@@ -216,6 +295,13 @@ void parseAppCommands(String command) {
     Serial.print(" with delay ");
     Serial.println(motor1Speed);
     motor1CommandArrived = true;
+    autoModeEnabled = false;
+    //if (motor1Direction == 1){
+//      currentStep1 += 1;
+//    }
+//   else if (motor1Direction == -1){
+//      currentStep1 -= 1;
+//    }
   } else if (command.startsWith("MOTOR2:")) {
     motor2Direction = command.charAt(7) == '-' ? -1 : 1;
     motor2Speed = max(2000, 2000 / command.substring(8).toInt());
@@ -224,9 +310,13 @@ void parseAppCommands(String command) {
     Serial.print(" with delay ");
     Serial.println(motor2Speed);
     motor2CommandArrived = true;
-    if (motor2Direction == 1){
-      currentStep1 -= 1;
+    autoModeEnabled = false;
+/*    if (motor2Direction == 1){
+      currentStep2 += 1;
     }
+    else if (motor2Direction == -1){
+      currentStep2 -= 1;
+    }*/
   }
   else if (command.startsWith("STOP")) {
     motor1CommandArrived = false;
@@ -235,14 +325,32 @@ void parseAppCommands(String command) {
   else if (command.startsWith("RESET")) {
       appControlMode = false;
       autoModeEnabled = false;
+      motor2CommandArrived = true;
+      motor1CommandArrived = true;
       Serial.println("Resetting position...");
         resetMotorPosition();
       Serial.println("Reset complete.");
+      motor1CommandArrived = false;
+      motor2CommandArrived = false;
     }
   else if (command.startsWith("AUTOMODE")) {
       appControlMode = false;
       autoModeEnabled = true;
       Serial.println("Automode Enabled");
+      delay(3000);
+      AutoMode();
+    }
+  else if (command.startsWith("APP_CONNECTED")) {
+      appControlMode = true;
+      autoModeEnabled = false;
+      motor1CommandArrived = false;
+      motor2CommandArrived = false;
+      Serial.println("Switching to App Mode...");
+      delay(3000);
+      Serial.println("Connected!");
+      delay(1500);
+      Serial.println();
+      AutoMode();
     }
 }
 
@@ -257,6 +365,7 @@ void checkBLECommands() {
       parseAppCommands(command);
     }
   }
+
 }
 
 void pulseMotor(int stepPin, int dirPin, int direction, int speedDelay) {
@@ -275,7 +384,7 @@ void loop() {
     checkBLECommands();
   }
 
-    
+   
 
   // Control motors with direct pin pulsing for faster response
  if (motor1CommandArrived){
@@ -283,17 +392,17 @@ void loop() {
       if (motor1Direction == 1){
       currentStep1 += 1;
     }
-    else if (motor1Direction == 0){
-      currentStep2 -= 0;
+    else if (motor1Direction == -1){
+      currentStep1 -= 1;
     }
  }
   if(motor2CommandArrived){
     pulseMotor(stepPin2, dirPin2, motor2Direction, motor2Speed);
-    if (motor2Direction){
+    if (motor2Direction == 1){
       currentStep2 += 1;
     }
-    else if (motor2Direction){
-      currentStep2 -= 0;
+    else if (motor2Direction == -1){
+      currentStep2 -= 1;
     }
   }
   else if (!motor2CommandArrived,!motor1CommandArrived) {
