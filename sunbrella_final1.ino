@@ -109,9 +109,9 @@ void controlMotorsWithPhotoresistors() {
 
   // Step 2: Handle Motor 2 only if TR and TL are within the range of 6
   if (abs(NorthEast - NorthWest) <= 4) {  // Check if TR and TL are within the range of 6
-    if (abs(NorthEast - SouthEast) >= 5 && (NorthEast > SouthEast)) {
+    if (abs(NorthEast - SouthEast) >= 4 && (NorthEast > SouthEast)) {
       moveMotor2CCL();  // Rotate motor toward NorthEast when NorthEast is greater
-    } else if (abs(NorthEast - SouthEast) >= 5 && (NorthEast < SouthEast)) {
+    } else if (abs(NorthEast - SouthEast) >= 4 && (NorthEast < SouthEast)) {
       moveMotor2CL(); // Rotate motor toward SouthEast when SouthEast is greater
     } else {
       motor2Moving = false; // Stop Motor 2
